@@ -1,20 +1,4 @@
-/**
- * This function runs when you open the Web App URL.
- * It searches for the file named 'index' and displays it.
- */
-function doGet() {
-  return HtmlService.createTemplateFromFile('index')
-    .evaluate()
-    .setTitle('New City Collegiate Rock Tracker')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
-}
-
-/**
- * This function sends the initial data to the website.
- * Later, we can change this to pull from a Google Sheet.
- */
-function getInitialData() {
++function getInitialData() {
   return [
     {
       id: 1,
