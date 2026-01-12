@@ -4,233 +4,200 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rock Tracker | Personal Strategy</title>
-    <!-- Tailwind for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Cormorant Garamond', -apple-system, serif; }
-        .font-inter { font-family: 'Inter', -apple-system, sans-serif; }
+        body { font-family: 'Cormorant Garamond', serif; }
+        .font-inter { font-family: 'Inter', sans-serif; }
         [x-cloak] { display: none !important; }
         .transition-all { transition: all 0.3s ease; }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
-        .main-container { min-height: 100vh; width: 100%; max-width: 72rem; margin: 0 auto; }
+        .input-inline { border: none; background: transparent; outline: none; padding: 0; width: 100%; }
+        .input-inline:focus { box-shadow: 0 2px 0 0 #6366f1; }
     </style>
 </head>
-<body class="bg-[#faf9f6] text-slate-900 p-6 md:p-12 pb-24 selection:bg-indigo-100" 
+<body class="min-h-screen bg-[#faf9f6] text-slate-900 selection:bg-indigo-100" 
       x-data="rockApp" 
-      x-init="init()"
-      x-cloak>
+      x-init="init()">
 
-    <div class="main-container">
-        
-        <!-- Cloud Sync Indicator / Auth -->
-        <div class="fixed top-4 right-4 z-[110] flex items-center gap-3">
-            <template x-if="user">
-                <div class="flex items-center gap-2 px-3 py-1.5 bg-white/90 backdrop-blur rounded-full border border-slate-100 shadow-sm">
-                    <div class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
-                    <span class="text-[8px] font-black uppercase tracking-widest text-slate-400 font-inter" x-text="user.isAnonymous ? 'Guest Mode' : user.email"></span>
-                    <button @click="user.isAnonymous ? loginWithGoogle() : logout()" class="text-[8px] font-black uppercase tracking-widest text-indigo-500 hover:text-indigo-700 ml-2" x-text="user.isAnonymous ? 'Link Google' : 'Sign Out'"></button>
+    <!-- AUTH GATE -->
+    <template x-if="appReady && !user">
+        <div class="fixed inset-0 z-[100] flex items-center justify-center bg-[#faf9f6] p-6">
+            <div class="max-w-md w-full text-center">
+                <h1 class="text-7xl font-black tracking-tighter text-slate-900 font-inter uppercase mb-2">Rock Tracker</h1>
+                <p class="text-[10px] font-black uppercase tracking-[0.5em] text-slate-400 font-inter mb-12 text-center">New City Collegiate</p>
+                <div class="bg-white p-12 rounded-[3.5rem] shadow-2xl border border-slate-100">
+                    <p class="text-2xl italic text-slate-500 mb-10 leading-relaxed">Secure your strategic focus across all devices.</p>
+                    <button @click="login()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-6 rounded-3xl font-black font-inter uppercase tracking-widest text-xs transition-all shadow-xl active:scale-95 flex items-center justify-center gap-3">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12.48 10.92v3.28h7.84c-.24 1.84-.90 3.16-1.94 4.18-1.28 1.28-3.3 2.7-6.9 2.7-6.12 0-10.88-4.94-10.88-11.06s4.76-11.06 10.88-11.06c3.3 0 5.7 1.3 7.5 3.02l2.3-2.3c-2.1-1.98-4.84-3.22-9.8-3.22-8.52 0-15.58 6.94-15.58 15.48s7.06 15.48 15.58 15.48c4.6 0 8.1-1.52 10.84-4.38 2.82-2.82 3.72-6.78 3.72-9.98 0-.66-.06-1.28-.18-1.84h-14.4z"/></svg>
+                        Sign in with Google
+                    </button>
+                    <button @click="loginAnonymously()" class="mt-6 text-[10px] font-black uppercase tracking-widest text-slate-300 hover:text-indigo-500 font-inter transition-colors">Continue as Guest</button>
                 </div>
-            </template>
-        </div>
-
-        <!-- Header Section -->
-        <header class="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-16">
-            <div>
-                <h1 class="text-6xl font-black tracking-tighter text-slate-900 font-inter mb-2 uppercase">
-                    Rock Tracker
-                </h1>
-                <p class="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 font-inter">New City Collegiate Strategy</p>
             </div>
-            <button 
-                @click="showNewRockForm = true" 
-                class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-full flex items-center gap-2 transition-all shadow-xl font-inter font-bold text-xs uppercase tracking-widest active:scale-95"
-            >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                Set New Rock
-            </button>
-        </header>
-
-        <!-- Pathway Goals Summary -->
-        <div class="grid grid-cols-4 gap-4 mb-16 max-w-2xl">
-            <template x-for="(theme, name) in themes" :key="name">
-                <div class="flex flex-col items-center gap-2">
-                    <div class="w-10 h-10 rounded-full shadow-lg transition-transform hover:scale-110" :style="`background-color: ${theme.color}`">
-                    </div>
-                    <span class="text-[9px] font-black uppercase tracking-widest text-slate-400 font-inter" x-text="name"></span>
-                </div>
-            </template>
         </div>
+    </template>
 
-        <div class="grid lg:grid-cols-12 gap-12 mb-24">
-            <!-- Main Rock List -->
-            <div class="lg:col-span-7 space-y-8">
-                <h2 class="text-[10px] font-black uppercase tracking-widest text-slate-400 font-inter mb-4 flex items-center gap-2">
-                    Current Focus 
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                </h2>
-                
-                <template x-if="rocks.length === 0">
-                    <div class="bg-white rounded-[3rem] border-2 border-dashed border-slate-200 py-32 text-center">
-                        <p class="text-2xl italic text-slate-400">"Seek first the kingdom..."</p>
+    <!-- LOADING STATE -->
+    <template x-if="!appReady">
+        <div class="fixed inset-0 flex items-center justify-center bg-[#faf9f6]">
+            <div class="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+    </template>
+
+    <!-- MAIN APP CONTENT -->
+    <template x-if="appReady && user">
+        <div class="max-w-6xl mx-auto p-6 md:p-12 pb-24" x-cloak>
+            
+            <!-- Cloud Sync Indicator -->
+            <div class="fixed top-4 right-4 z-[50] flex items-center gap-4">
+                <button @click="logout()" class="text-[8px] font-black uppercase tracking-widest text-slate-300 hover:text-red-500 font-inter transition-colors">Sign Out</button>
+                <div class="flex items-center gap-2 px-3 py-1.5 bg-white/80 backdrop-blur rounded-full border border-slate-100 shadow-sm">
+                    <div class="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse"></div>
+                    <span class="text-[8px] font-black uppercase tracking-widest text-slate-400 font-inter">Cloud Synchronized</span>
+                </div>
+            </div>
+
+            <!-- Header Section -->
+            <header class="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-16">
+                <div>
+                    <h1 class="text-6xl font-black tracking-tighter text-slate-900 font-inter mb-2 uppercase">Rock Tracker</h1>
+                    <p class="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 font-inter">New City Collegiate Strategy</p>
+                </div>
+                <button @click="showNewRockForm = true" class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-full flex items-center gap-2 transition-all shadow-xl font-inter font-bold text-xs uppercase tracking-widest active:scale-95">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    Set New Rock
+                </button>
+            </header>
+
+            <!-- Pathway Summary -->
+            <div class="grid grid-cols-4 gap-4 mb-16 max-w-2xl">
+                <template x-for="(theme, name) in themes" :key="name">
+                    <div class="flex flex-col items-center gap-2">
+                        <div class="w-10 h-10 rounded-full shadow-lg transition-transform hover:scale-110" :style="`background-color: ${theme.color}`"></div>
+                        <span class="text-[9px] font-black uppercase tracking-widest text-slate-400 font-inter" x-text="name"></span>
                     </div>
                 </template>
+            </div>
 
-                <template x-for="rock in rocks" :key="rock.id">
-                    <div 
-                        @click="activeRockId = rock.id" 
-                        class="bg-white rounded-[2.5rem] p-8 border-2 cursor-pointer transition-all relative group"
-                        :class="activeRockId === rock.id ? 'border-indigo-500 shadow-2xl scale-[1.01]' : 'border-transparent shadow-sm hover:border-slate-200'"
-                    >
-                        <div class="flex justify-between items-start mb-6">
-                            <div class="flex flex-col gap-2 flex-1">
-                                <div class="flex gap-2">
-                                    <span class="text-[9px] font-black px-2 py-0.5 rounded bg-slate-100 text-slate-500 uppercase tracking-tighter font-inter" x-text="rock.status"></span>
-                                    <span class="text-[9px] font-black uppercase tracking-[0.2em] font-inter" :style="`color: ${themes[rock.pathway]?.color || '#ccc'}`" x-text="rock.pathway"></span>
+            <div class="grid lg:grid-cols-12 gap-12 mb-24">
+                <!-- Rock List -->
+                <div class="lg:col-span-7 space-y-8">
+                    <h2 class="text-[10px] font-black uppercase tracking-widest text-slate-400 font-inter mb-4 flex items-center gap-2">
+                        Current Focus <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </h2>
+                    
+                    <template x-if="rocks.length === 0">
+                        <div class="bg-white rounded-[3rem] border-2 border-dashed border-slate-200 py-32 text-center">
+                            <p class="text-2xl italic text-slate-400">"Seek first the kingdom..."</p>
+                        </div>
+                    </template>
+
+                    <template x-for="rock in rocks" :key="rock.id">
+                        <div @click="activeRockId = rock.id" class="bg-white rounded-[2.5rem] p-8 border-2 cursor-pointer transition-all" :class="activeRockId === rock.id ? 'border-indigo-500 shadow-2xl scale-[1.01]' : 'border-transparent shadow-sm hover:border-slate-200'">
+                            <div class="flex justify-between items-start mb-6">
+                                <div class="flex flex-col gap-2 w-full pr-8">
+                                    <div class="flex gap-2">
+                                        <span class="text-[9px] font-black px-2 py-0.5 rounded bg-slate-100 text-slate-500 uppercase tracking-tighter font-inter" x-text="rock.status"></span>
+                                        <span class="text-[9px] font-black uppercase tracking-[0.2em] font-inter" :style="`color: ${themes[rock.pathway].color}`" x-text="rock.pathway"></span>
+                                    </div>
+                                    <input type="text" x-model="rock.title" @input.debounce.800ms="saveRock(rock)" @click.stop class="input-inline text-3xl font-bold italic leading-none text-slate-900" placeholder="Unnamed Focus">
                                 </div>
-                                
-                                <!-- Editable Title -->
-                                <div class="relative flex items-center gap-2 pr-8">
-                                    <input 
-                                        type="text" 
-                                        x-model="rock.title" 
-                                        @input.debounce.1000ms="saveToFirestore(rock)"
-                                        @click.stop
-                                        class="text-3xl font-bold italic leading-none text-slate-900 bg-transparent border-none outline-none focus:ring-2 focus:ring-indigo-100 rounded w-full"
-                                    >
-                                    <svg class="w-4 h-4 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                <button @click.stop="deleteRock(rock.id)" class="text-slate-200 hover:text-red-500 transition-colors p-2">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                </button>
+                            </div>
+
+                            <div class="mb-8 space-y-3">
+                                <template x-for="(step, stepIndex) in rock.battlePlan" :key="stepIndex">
+                                    <div @click.stop="toggleTask(rock, stepIndex)" class="flex items-center gap-3 group">
+                                        <div class="w-5 h-5 rounded border-2 flex items-center justify-center transition-colors" :class="step.completed ? 'bg-emerald-500 border-emerald-500' : 'border-slate-200 group-hover:border-indigo-300'">
+                                            <template x-if="step.completed"><svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg></template>
+                                        </div>
+                                        <span class="text-lg italic transition-all" :class="step.completed ? 'text-slate-300 line-through' : 'text-slate-600'" x-text="step.task"></span>
+                                    </div>
+                                </template>
+                                <div class="mt-4 pt-4 border-t border-slate-50">
+                                    <input type="text" placeholder="+ Add a step..." class="w-full bg-transparent border-none outline-none italic text-slate-400 focus:text-indigo-600 transition-colors" @click.stop @keydown.enter.prevent.stop="addInlineStep(rock, $event.target)">
                                 </div>
                             </div>
-                            
-                            <button 
-                                @click.stop="deleteRock(rock.id)" 
-                                class="text-slate-200 hover:text-red-500 transition-colors p-2"
-                            >
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                            </button>
+
+                            <div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                                <div class="h-full transition-all duration-1000 ease-out" :style="`width: ${calculateProgress(rock)}%; background-color: ${themes[rock.pathway].color}`"></div>
+                            </div>
                         </div>
-                        
-                        <!-- Battle Plan -->
-                        <div class="mb-8 space-y-3">
-                            <template x-for="(step, stepIndex) in rock.battlePlan" :key="stepIndex">
-                                <div @click.stop="toggleTask(rock, stepIndex)" class="flex items-center gap-3 group/task">
-                                    <div class="w-5 h-5 rounded border-2 flex items-center justify-center transition-colors"
-                                         :class="step.completed ? 'bg-emerald-500 border-emerald-500' : 'border-slate-200 group-hover/task:border-indigo-300'">
-                                        <template x-if="step.completed">
-                                            <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                    </template>
+                </div>
+
+                <!-- Sidebar Workspace -->
+                <aside class="lg:col-span-5">
+                    <div class="bg-white rounded-[3rem] p-10 shadow-sm border border-slate-100 min-h-[500px] sticky top-8 flex flex-col">
+                        <template x-if="!activeRockId">
+                            <div class="flex-1 flex flex-col items-center justify-center text-center py-20">
+                                <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-6">
+                                    <svg class="w-6 h-6 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                </div>
+                                <p class="text-slate-400 italic">Select a Rock to expand your strategy and field notes.</p>
+                            </div>
+                        </template>
+
+                        <template x-if="activeRockId && getActiveRock()">
+                            <div class="space-y-10 flex-1 flex flex-col">
+                                <div>
+                                    <h3 class="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-500 font-inter mb-4">Detailed Strategy</h3>
+                                    <textarea x-model="getActiveRock().longDescription" @input.debounce.1000ms="saveRock(getActiveRock())" class="w-full bg-slate-50 rounded-3xl p-6 italic text-slate-600 leading-relaxed outline-none border-2 border-transparent focus:border-indigo-100 transition-colors min-h-[160px]" placeholder="Unpack the 'why' and the 'how' behind this Rock here..."></textarea>
+                                </div>
+
+                                <div class="flex-1 flex flex-col">
+                                    <h3 class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 font-inter mb-4">Field Notes & Comments</h3>
+                                    <div class="space-y-3 mb-6 flex-1 overflow-y-auto max-h-[300px] pr-2">
+                                        <template x-for="(note, nIdx) in getActiveRock().notes" :key="nIdx">
+                                            <div class="p-4 bg-white border border-slate-100 rounded-2xl shadow-sm group">
+                                                <div class="flex justify-between items-start mb-1">
+                                                    <span class="text-[8px] font-bold text-slate-300 uppercase tracking-widest font-inter" x-text="note.date"></span>
+                                                    <button @click="deleteNote(nIdx)" class="opacity-0 group-hover:opacity-100 text-slate-200 hover:text-red-400 transition-all"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+                                                </div>
+                                                <p class="text-sm italic text-slate-700 leading-relaxed" x-text="note.content"></p>
+                                            </div>
                                         </template>
                                     </div>
-                                    <span class="text-lg italic transition-all" :class="step.completed ? 'text-slate-300 line-through' : 'text-slate-600'" x-text="step.task"></span>
-                                </div>
-                            </template>
-                            
-                            <div class="mt-4 pt-4 border-t border-slate-50">
-                                <input 
-                                    type="text" 
-                                    placeholder="+ Add a step..." 
-                                    class="w-full bg-transparent border-none outline-none italic text-slate-400 focus:text-indigo-600 transition-colors"
-                                    @click.stop
-                                    @keydown.enter.prevent.stop="addInlineStep(rock, $event.target)"
-                                >
-                            </div>
-                        </div>
-
-                        <div class="space-y-2">
-                            <div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                                <div class="h-full transition-all duration-1000 ease-out" :style="`width: ${calculateProgress(rock)}%; background-color: ${themes[rock.pathway]?.color || '#ccc'}`"></div>
-                            </div>
-                        </div>
-                    </div>
-                </template>
-            </div>
-
-            <!-- Sidebar Workspace -->
-            <aside class="lg:col-span-5">
-                <div class="bg-white rounded-[3rem] p-10 shadow-sm border border-slate-100 min-h-[500px] sticky top-8 flex flex-col">
-                    <template x-if="!activeRockId">
-                        <div class="flex-1 flex flex-col items-center justify-center text-center py-20">
-                            <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-6">
-                                <svg class="w-6 h-6 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                            </div>
-                            <p class="text-slate-400 italic">Select a Rock to expand your strategy and field notes.</p>
-                        </div>
-                    </template>
-
-                    <template x-if="activeRockId">
-                        <div class="space-y-10 flex-1 flex flex-col">
-                            <div>
-                                <h3 class="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-500 font-inter mb-4">Detailed Strategy</h3>
-                                <textarea 
-                                    x-model="getActiveRock().longDescription"
-                                    @input.debounce.1000ms="saveToFirestore(getActiveRock())"
-                                    class="w-full bg-slate-50 rounded-3xl p-6 italic text-slate-600 leading-relaxed outline-none border-2 border-transparent focus:border-indigo-100 transition-colors min-h-[160px]"
-                                    placeholder="Unpack the 'why' and the 'how' behind this Rock here..."
-                                ></textarea>
-                            </div>
-
-                            <div class="flex-1 flex flex-col">
-                                <h3 class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 font-inter mb-4">Field Notes & Comments</h3>
-                                
-                                <div class="space-y-3 mb-6 flex-1 overflow-y-auto max-h-[300px] pr-2">
-                                    <template x-if="!getActiveRock().notes || getActiveRock().notes.length === 0">
-                                        <p class="text-sm italic text-slate-300">No field notes yet.</p>
-                                    </template>
-                                    <template x-for="(note, nIdx) in getActiveRock().notes" :key="nIdx">
-                                        <div class="p-4 bg-white border border-slate-100 rounded-2xl shadow-sm group">
-                                            <div class="flex justify-between items-start mb-1">
-                                                <span class="text-[8px] font-bold text-slate-300 uppercase tracking-widest font-inter" x-text="note.date"></span>
-                                                <button @click="deleteNote(nIdx)" class="opacity-0 group-hover:opacity-100 text-slate-200 hover:text-red-400 transition-all">
-                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                                                </button>
-                                            </div>
-                                            <p class="text-sm italic text-slate-700 leading-relaxed" x-text="note.content"></p>
+                                    <div class="mt-auto">
+                                        <textarea x-model="noteDraft" @keydown.enter.prevent="addNote()" class="w-full bg-white border-2 border-slate-100 rounded-2xl p-4 text-sm italic outline-none focus:border-indigo-500 transition-all" placeholder="Type a comment..." rows="2"></textarea>
+                                        <div class="flex justify-between items-center mt-2">
+                                            <span class="text-[8px] text-slate-400 font-inter uppercase tracking-widest">Press Enter to save</span>
+                                            <button @click="addNote()" class="bg-slate-900 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest font-inter hover:bg-indigo-600 transition-all">Save Note</button>
                                         </div>
-                                    </template>
-                                </div>
-
-                                <div class="mt-auto">
-                                    <textarea 
-                                        x-model="noteDraft"
-                                        @keydown.enter.prevent="addNote()"
-                                        class="w-full bg-white border-2 border-slate-100 rounded-2xl p-4 text-sm italic outline-none focus:border-indigo-500 transition-all"
-                                        placeholder="Type a comment or update..."
-                                        rows="2"
-                                    ></textarea>
-                                    <div class="flex justify-between items-center mt-2">
-                                        <span class="text-[8px] text-slate-400 font-inter uppercase tracking-widest">Press Enter to save</span>
-                                        <button @click="addNote()" class="bg-slate-900 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest font-inter hover:bg-indigo-600 transition-all">Save Note</button>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    </template>
-                </div>
-            </aside>
-        </div>
-
-        <!-- Strategy Tips / Toolkit -->
-        <section class="border-t border-slate-200 pt-20">
-            <h2 class="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 font-inter mb-12 text-center">The Strategist's Toolkit</h2>
-            <div class="grid md:grid-cols-3 gap-12">
-                <div class="space-y-4">
-                    <div class="text-indigo-600 font-bold text-2xl italic">01. Less is More</div>
-                    <p class="text-slate-500 leading-relaxed italic">You cannot move ten rocks at once. Pick three and move them with excellence. If everything is a priority, nothing is.</p>
-                </div>
-                <div class="space-y-4">
-                    <div class="text-indigo-600 font-bold text-2xl italic">02. Specificity is Speed</div>
-                    <p class="text-slate-500 leading-relaxed italic">"Reach students" is a wish. "Table for 2 hours on the Quad" is a plan. Break your Rock into tangible, bite-sized steps.</p>
-                </div>
-                <div class="space-y-4">
-                    <div class="text-indigo-600 font-bold text-2xl italic">03. The 90-Day Sprint</div>
-                    <p class="text-slate-500 leading-relaxed italic">Rocks should be achievable within a quarter. If your Rock is too big, it’s a boulder—break it down into manageable pieces.</p>
-                </div>
+                        </template>
+                    </div>
+                </aside>
             </div>
-        </section>
-    </div>
 
-    <!-- New Rock Modal -->
+            <!-- Strategy Tips -->
+            <section class="border-t border-slate-200 pt-20">
+                <h2 class="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 font-inter mb-12 text-center">The Strategist's Toolkit</h2>
+                <div class="grid md:grid-cols-3 gap-12">
+                    <div class="space-y-4">
+                        <div class="text-indigo-600 font-bold text-2xl italic">01. Less is More</div>
+                        <p class="text-slate-500 leading-relaxed italic">You cannot move ten rocks at once. Pick three and move them with excellence.</p>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="text-indigo-600 font-bold text-2xl italic">02. Specificity is Speed</div>
+                        <p class="text-slate-500 leading-relaxed italic">Break your Rock into tangible, bite-sized steps. "Reach students" is a wish; "Table for 2 hours" is a plan.</p>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="text-indigo-600 font-bold text-2xl italic">03. The 90-Day Sprint</div>
+                        <p class="text-slate-500 leading-relaxed italic">Rocks should be achievable within a quarter. If it's too big, it's a boulder—break it down.</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </template>
+
+    <!-- Modal: New Rock -->
     <template x-if="showNewRockForm">
         <div class="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <div class="absolute inset-0 bg-slate-900/80 backdrop-blur-md" @click="showNewRockForm = false"></div>
@@ -241,15 +208,13 @@
                         <label class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-3 block font-inter">Core Objective</label>
                         <input x-model="newRock.title" class="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl font-bold italic text-3xl outline-none focus:border-indigo-500" placeholder="Operation: [Title]">
                     </div>
-                    <div class="grid grid-cols-2 gap-6">
-                        <div>
-                            <label class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-3 block font-inter">Pathway</label>
-                            <select x-model="newRock.pathway" class="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl font-bold italic text-xl outline-none appearance-none">
-                                <template x-for="name in Object.keys(themes)">
-                                    <option :value="name" x-text="name"></option>
-                                </template>
-                            </select>
-                        </div>
+                    <div>
+                        <label class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-3 block font-inter">Pathway</label>
+                        <select x-model="newRock.pathway" class="w-full p-6 bg-slate-50 border-2 border-slate-100 rounded-3xl font-bold italic text-xl outline-none appearance-none">
+                            <template x-for="name in Object.keys(themes)">
+                                <option :value="name" x-text="name"></option>
+                            </template>
+                        </select>
                     </div>
                 </div>
                 <div class="flex gap-6">
@@ -262,19 +227,19 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signInAnonymously, signOut, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = JSON.parse(__firebase_config);
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'ncc-rock-tracker-v4';
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'ncc-rock-tracker';
 
         document.addEventListener('alpine:init', () => {
             Alpine.data('rockApp', () => ({
+                appReady: false,
                 user: null,
-                loading: true,
                 rocks: [],
                 themes: {
                     'Connect': { color: '#DFB36D' },
@@ -286,99 +251,63 @@
                 showNewRockForm: false,
                 noteDraft: '',
                 newRock: { title: '', pathway: 'Connect' },
+                unsubscribe: null,
 
                 async init() {
                     const initAuth = async () => {
                         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                             await signInWithCustomToken(auth, __initial_auth_token);
-                        } else {
-                            await signInAnonymously(auth);
                         }
                     };
                     await initAuth();
 
                     onAuthStateChanged(auth, (user) => {
                         this.user = user;
-                        this.loading = false;
+                        this.appReady = true;
                         if (user) {
                             this.setupListener(user.uid);
+                        } else {
+                            if (this.unsubscribe) this.unsubscribe();
+                            this.rocks = [];
                         }
                     });
                 },
 
                 setupListener(uid) {
                     const colRef = collection(db, 'artifacts', appId, 'users', uid, 'rocks');
-                    onSnapshot(colRef, (snapshot) => {
-                        const items = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-                        // Sort by createdAt descending
-                        this.rocks = items.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-                        
-                        // Set active rock if none set
-                        if (this.rocks.length > 0 && !this.activeRockId) {
-                            this.activeRockId = this.rocks[0].id;
-                        }
-                        
-                        // If current user is fresh and has 0 rocks, seed the example once
-                        if (items.length === 0 && this.user) {
-                             this.seedDefault();
-                        }
-                    }, (err) => console.error("Firestore Listener Error:", err));
+                    this.unsubscribe = onSnapshot(colRef, (snap) => {
+                        this.rocks = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+                            .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                        if (this.rocks.length > 0 && !this.activeRockId) this.activeRockId = this.rocks[0].id;
+                    }, (err) => console.error(err));
                 },
 
-                async seedDefault() {
-                    const id = Date.now().toString();
-                    const defaultRock = {
-                        title: "NCC Social Media Team",
-                        longDescription: "If we are going to build a culture of unity around our campus, we need the space to connect with them regularly...",
-                        pathway: "Connect",
-                        status: "In Progress",
-                        createdAt: Date.now(),
-                        battlePlan: [
-                            { task: "Find 3 others interested in helping run the team", completed: true },
-                            { task: "Get elder approval for the media platforms", completed: false },
-                            { task: "Begin developing content plans", completed: false }
-                        ],
-                        notes: [
-                            { date: "JAN 09", content: "Spoke with Sarah and Mark—they are both in." }
-                        ]
-                    };
-                    await setDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'rocks', id), defaultRock);
+                async login() {
+                    await signInWithPopup(auth, new GoogleAuthProvider());
                 },
 
-                async loginWithGoogle() {
-                    const provider = new GoogleAuthProvider();
-                    try {
-                        await signInWithPopup(auth, provider);
-                    } catch (e) {
-                        console.error("Login failed", e);
-                    }
+                async loginAnonymously() {
+                    await signInAnonymously(auth);
                 },
 
                 async logout() {
                     await signOut(auth);
-                    location.reload();
-                },
-
-                async saveToFirestore(rock) {
-                    if (!this.user || !rock.id) return;
-                    const { id, ...data } = rock;
-                    await setDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'rocks', String(id)), data);
+                    window.location.reload();
                 },
 
                 getActiveRock() {
-                    return this.rocks.find(r => r.id === this.activeRockId) || {};
+                    return this.rocks.find(r => r.id === this.activeRockId);
                 },
 
                 calculateProgress(rock) {
-                    if (!rock.battlePlan || !rock.battlePlan.length) return 0;
-                    const done = rock.battlePlan.filter(t => t.completed).length;
-                    return Math.round((done / rock.battlePlan.length) * 100);
+                    if (!rock.battlePlan?.length) return 0;
+                    return Math.round((rock.battlePlan.filter(s => s.completed).length / rock.battlePlan.length) * 100);
                 },
 
                 async addRock() {
-                    if (!this.newRock.title.trim() || !this.user) return;
+                    if (!this.newRock.title.trim()) return;
                     const id = Date.now().toString();
-                    const rockData = {
+                    const data = {
                         ...this.newRock,
                         longDescription: '',
                         status: 'Not Started',
@@ -386,37 +315,39 @@
                         notes: [],
                         createdAt: Date.now()
                     };
-                    await setDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'rocks', id), rockData);
+                    await setDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'rocks', id), data);
                     this.newRock = { title: '', pathway: 'Connect' };
                     this.showNewRockForm = false;
                     this.activeRockId = id;
                 },
 
+                async saveRock(rock) {
+                    if (!this.user || !rock.id) return;
+                    const { id, ...data } = rock;
+                    await setDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'rocks', id), data);
+                },
+
                 async deleteRock(id) {
-                    if (!this.user) return;
-                    // Custom modal UI replacement for confirm
-                    const confirmed = window.confirm("Are you sure you want to delete this Rock?");
-                    if (confirmed) {
-                        await deleteDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'rocks', String(id)));
+                    if (confirm('Delete this Rock?')) {
+                        await deleteDoc(doc(db, 'artifacts', appId, 'users', this.user.uid, 'rocks', id));
                         if (this.activeRockId === id) this.activeRockId = null;
                     }
+                },
+
+                async toggleTask(rock, idx) {
+                    rock.battlePlan[idx].completed = !rock.battlePlan[idx].completed;
+                    this.updateStatus(rock);
+                    await this.saveRock(rock);
                 },
 
                 async addInlineStep(rock, input) {
                     const task = input.value.trim();
                     if (task) {
-                        if(!rock.battlePlan) rock.battlePlan = [];
                         rock.battlePlan.push({ task, completed: false });
                         input.value = '';
                         this.updateStatus(rock);
-                        await this.saveToFirestore(rock);
+                        await this.saveRock(rock);
                     }
-                },
-
-                async toggleTask(rock, index) {
-                    rock.battlePlan[index].completed = !rock.battlePlan[index].completed;
-                    this.updateStatus(rock);
-                    await this.saveToFirestore(rock);
                 },
 
                 async addNote() {
@@ -428,20 +359,18 @@
                         content: this.noteDraft
                     });
                     this.noteDraft = '';
-                    await this.saveToFirestore(rock);
+                    await this.saveRock(rock);
                 },
 
-                async deleteNote(index) {
+                async deleteNote(idx) {
                     const rock = this.getActiveRock();
-                    rock.notes.splice(index, 1);
-                    await this.saveToFirestore(rock);
+                    rock.notes.splice(idx, 1);
+                    await this.saveRock(rock);
                 },
 
                 updateStatus(rock) {
-                    const p = this.calculateProgress(rock);
-                    if (p === 100) rock.status = 'Rock Solid';
-                    else if (p > 0) rock.status = 'In Progress';
-                    else rock.status = 'Not Started';
+                    const progress = this.calculateProgress(rock);
+                    rock.status = progress === 100 ? 'Rock Solid' : (progress > 0 ? 'In Progress' : 'Not Started');
                 }
             }));
         });
