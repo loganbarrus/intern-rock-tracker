@@ -24,10 +24,10 @@
 
     <div class="max-w-6xl mx-auto">
         
-        <!-- Local Sync Indicator -->
+        <!-- Cloud Sync Indicator -->
         <div class="fixed top-4 right-4 z-[50] flex items-center gap-2 px-3 py-1.5 bg-white/80 backdrop-blur rounded-full border border-slate-100 shadow-sm">
-            <div class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
-            <span class="text-[8px] font-black uppercase tracking-widest text-slate-400 font-inter">Auto-Saving to Device</span>
+            <div class="w-1.5 h-1.5 rounded-full animate-pulse" :class="user ? 'bg-emerald-500' : 'bg-amber-500'"></div>
+            <span class="text-[8px] font-black uppercase tracking-widest text-slate-400 font-inter" x-text="user ? (user.isAnonymous ? 'Guest Cloud Sync' : 'Synced: ' + user.displayName) : 'Connecting...'"></span>
         </div>
 
         <!-- Header Section -->
@@ -37,6 +37,11 @@
                     Rock Tracker
                 </h1>
                 <p class="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 font-inter">New City Collegiate Strategy</p>
+                <div class="mt-4 flex gap-2">
+                    <template x-if="user && user.isAnonymous">
+                        <button @click="handleGoogleSignIn()" class="text-[9px] font-black uppercase tracking-widest text-indigo-600 hover:text-indigo-800 transition-colors">Link Google Account</button>
+                    </template>
+                </div>
             </div>
             <button 
                 @click="showNewRockForm = true" 
@@ -79,12 +84,19 @@
                         :class="activeRockId === rock.id ? 'border-indigo-500 shadow-2xl scale-[1.01]' : 'border-transparent shadow-sm hover:border-slate-200'"
                     >
                         <div class="flex justify-between items-start mb-6">
-                            <div class="flex flex-col gap-2">
+                            <div class="flex flex-col gap-2 w-full pr-8">
                                 <div class="flex gap-2">
                                     <span class="text-[9px] font-black px-2 py-0.5 rounded bg-slate-100 text-slate-500 uppercase tracking-tighter font-inter" x-text="rock.status"></span>
                                     <span class="text-[9px] font-black uppercase tracking-[0.2em] font-inter" :style="`color: ${themes[rock.pathway].color}`" x-text="rock.pathway"></span>
                                 </div>
-                                <h3 class="text-3xl font-bold italic leading-none text-slate-900" x-text="rock.title"></h3>
+                                <!-- Editable Title -->
+                                <input 
+                                    type="text" 
+                                    x-model="rock.title" 
+                                    @click.stop 
+                                    @input.debounce.1000ms="saveRock(rock)"
+                                    class="text-3xl font-bold italic leading-none text-slate-900 bg-transparent border-none outline-none focus:ring-2 focus:ring-indigo-100 rounded-lg w-full"
+                                >
                             </div>
                             <button @click.stop="deleteRock(rock.id)" class="text-slate-200 hover:text-red-500 transition-colors p-2">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
@@ -144,7 +156,7 @@
                                 <h3 class="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-500 font-inter mb-4">Detailed Strategy</h3>
                                 <textarea 
                                     x-model="getActiveRock().longDescription"
-                                    @input.debounce.500ms="saveToLocal()"
+                                    @input.debounce.1000ms="saveRock(getActiveRock())"
                                     class="w-full bg-slate-50 rounded-3xl p-6 italic text-slate-600 leading-relaxed outline-none border-2 border-transparent focus:border-indigo-100 transition-colors min-h-[160px]"
                                     placeholder="Unpack the 'why' and the 'how' behind this Rock here..."
                                 ></textarea>
@@ -191,21 +203,21 @@
             </aside>
         </div>
 
-        <!-- Strategy Tips / Toolkit -->
+        <!-- Strategy Tips -->
         <section class="border-t border-slate-200 pt-20">
             <h2 class="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 font-inter mb-12 text-center">The Strategist's Toolkit</h2>
             <div class="grid md:grid-cols-3 gap-12">
                 <div class="space-y-4">
                     <div class="text-indigo-600 font-bold text-2xl italic">01. Less is More</div>
-                    <p class="text-slate-500 leading-relaxed italic">You cannot move ten rocks at once. Pick three and move them with excellence. If everything is a priority, nothing is.</p>
+                    <p class="text-slate-500 leading-relaxed italic">You cannot move ten rocks at once. Pick three and move them with excellence.</p>
                 </div>
                 <div class="space-y-4">
                     <div class="text-indigo-600 font-bold text-2xl italic">02. Specificity is Speed</div>
-                    <p class="text-slate-500 leading-relaxed italic">"Reach students" is a wish. "Table for 2 hours on the Quad" is a plan. Break your Rock into tangible, bite-sized steps.</p>
+                    <p class="text-slate-500 leading-relaxed italic">Break your Rock into tangible, bite-sized steps.</p>
                 </div>
                 <div class="space-y-4">
                     <div class="text-indigo-600 font-bold text-2xl italic">03. The 90-Day Sprint</div>
-                    <p class="text-slate-500 leading-relaxed italic">Rocks should be achievable within a quarter. If your Rock is too big, it’s a boulder—break it down into manageable pieces.</p>
+                    <p class="text-slate-500 leading-relaxed italic">Rocks should be achievable within a quarter.</p>
                 </div>
             </div>
         </section>
@@ -241,10 +253,22 @@
         </div>
     </template>
 
-    <script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Initialize Firebase
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'rock-tracker-app';
+
         document.addEventListener('alpine:init', () => {
             Alpine.data('rockApp', () => ({
                 rocks: [],
+                user: null,
                 themes: {
                     'Connect': { color: '#DFB36D' },
                     'Grow': { color: '#6D886D' },
@@ -255,36 +279,45 @@
                 showNewRockForm: false,
                 noteDraft: '',
                 newRock: { title: '', pathway: 'Connect' },
+                unsubscribeSync: null,
 
-                init() {
-                    const saved = localStorage.getItem('ncc_rocks_v3');
-                    if (saved) {
-                        this.rocks = JSON.parse(saved);
-                    } else {
-                        // Default example based on user request
-                        this.rocks = [{
-                            id: 1,
-                            title: "NCC Social Media Team",
-                            longDescription: "If we are going to build a culture of unity around our campus, we need the space to connect with them regularly. Social media provides a consistent and easy-to-access medium where we can interact with students all over campus!",
-                            pathway: "Connect",
-                            status: "In Progress",
-                            battlePlan: [
-                                { task: "Find 3 others interested in helping run the team", completed: true },
-                                { task: "Get elder approval for the media platforms", completed: false },
-                                { task: "Begin developing content plans", completed: false }
-                            ],
-                            notes: [
-                                { date: "JAN 09", content: "Spoke with Sarah and Mark—they are both in. Just need one more student for the initial core group." }
-                            ]
-                        }];
-                    }
-                    if (this.rocks.length > 0) this.activeRockId = this.rocks[0].id;
+                async init() {
+                    // Auth logic
+                    const initAuth = async () => {
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            await signInWithCustomToken(auth, __initial_auth_token);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                    };
+                    await initAuth();
+
+                    onAuthStateChanged(auth, (user) => {
+                        this.user = user;
+                        if (user) {
+                            this.setupSync(user);
+                        }
+                    });
                 },
 
-                saveToLocal() {
-                    localStorage.setItem('ncc_rocks_v3', JSON.stringify(this.rocks));
+                setupSync(user) {
+                    if (this.unsubscribeSync) this.unsubscribeSync();
+                    
+                    const rocksRef = collection(db, 'artifacts', appId, 'users', user.uid, 'rocks');
+                    this.unsubscribeSync = onSnapshot(rocksRef, (snapshot) => {
+                        this.rocks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        if (this.rocks.length > 0 && !this.activeRockId) {
+                            this.activeRockId = this.rocks[0].id;
+                        }
+                    }, (err) => console.error("Sync error:", err));
                 },
-                
+
+                async saveRock(rock) {
+                    if (!this.user) return;
+                    const rockDoc = doc(db, 'artifacts', appId, 'users', this.user.uid, 'rocks', rock.id);
+                    await updateDoc(rockDoc, { ...rock });
+                },
+
                 getActiveRock() {
                     return this.rocks.find(r => r.id === this.activeRockId) || {};
                 },
@@ -295,48 +328,51 @@
                     return Math.round((done / rock.battlePlan.length) * 100);
                 },
 
-                addRock() {
-                    if (!this.newRock.title.trim()) return;
-                    this.rocks.unshift({
-                        id: Date.now(),
+                async addRock() {
+                    if (!this.newRock.title.trim() || !this.user) return;
+                    const rocksRef = collection(db, 'artifacts', appId, 'users', this.user.uid, 'rocks');
+                    const newDoc = await addDoc(rocksRef, {
                         ...this.newRock,
                         longDescription: '',
                         status: 'Not Started',
                         battlePlan: [],
-                        notes: []
+                        notes: [],
+                        createdAt: Date.now()
                     });
-                    this.saveToLocal();
+                    this.activeRockId = newDoc.id;
                     this.newRock = { title: '', pathway: 'Connect' };
                     this.showNewRockForm = false;
-                    this.activeRockId = this.rocks[0].id;
                 },
 
-                deleteRock(id) {
-                    if (confirm('Delete this Rock?')) {
-                        this.rocks = this.rocks.filter(r => r.id !== id);
+                async deleteRock(id) {
+                    if (!this.user) return;
+                    // Custom modal would be better, but keeping logic consistent
+                    const confirmed = confirm('Delete this Rock?');
+                    if (confirmed) {
+                        const rockDoc = doc(db, 'artifacts', appId, 'users', this.user.uid, 'rocks', id);
+                        await deleteDoc(rockDoc);
                         if (this.activeRockId === id) this.activeRockId = null;
-                        this.saveToLocal();
                     }
                 },
 
-                addInlineStep(rock, input) {
+                async addInlineStep(rock, input) {
                     const task = input.value.trim();
-                    if (task) {
+                    if (task && this.user) {
                         rock.battlePlan.push({ task, completed: false });
                         input.value = '';
                         this.updateStatus(rock);
-                        this.saveToLocal();
+                        await this.saveRock(rock);
                     }
                 },
 
-                toggleTask(rock, index) {
+                async toggleTask(rock, index) {
                     rock.battlePlan[index].completed = !rock.battlePlan[index].completed;
                     this.updateStatus(rock);
-                    this.saveToLocal();
+                    await this.saveRock(rock);
                 },
 
-                addNote() {
-                    if (!this.noteDraft.trim()) return;
+                async addNote() {
+                    if (!this.noteDraft.trim() || !this.user) return;
                     const rock = this.getActiveRock();
                     if (!rock.notes) rock.notes = [];
                     
@@ -346,13 +382,13 @@
                     });
                     
                     this.noteDraft = '';
-                    this.saveToLocal();
+                    await this.saveRock(rock);
                 },
 
-                deleteNote(index) {
+                async deleteNote(index) {
                     const rock = this.getActiveRock();
                     rock.notes.splice(index, 1);
-                    this.saveToLocal();
+                    await this.saveRock(rock);
                 },
 
                 updateStatus(rock) {
@@ -360,6 +396,15 @@
                     if (progress === 100) rock.status = 'Rock Solid';
                     else if (progress > 0) rock.status = 'In Progress';
                     else rock.status = 'Not Started';
+                },
+
+                async handleGoogleSignIn() {
+                    const provider = new GoogleAuthProvider();
+                    try {
+                        await signInWithPopup(auth, provider);
+                    } catch (error) {
+                        console.error("Sign-in failed:", error);
+                    }
                 }
             }));
         });
